@@ -52,6 +52,7 @@ resource "aws_security_group" "k8s_sg" {
   }
 }
 
+
 # 6. יצירת 3 מופעי EC2
 resource "aws_instance" "k8s_nodes" {
   count                  = 3
@@ -59,41 +60,15 @@ resource "aws_instance" "k8s_nodes" {
   instance_type          = "t3.medium"
   subnet_id              = aws_subnet.k8s_subnet.id
   vpc_security_group_ids = [aws_security_group.k8s_sg.id]
+  
+  # הוסף את השורה הזו כדי שהמכונות יקבלו את מפתח ה-SSH של המעבדה!
+  key_name               = "vockey"
 
   user_data = <<-EOF
               #!/bin/bash
               # 1. הכנת המערכת
               swapoff -a
-              sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-              
-              cat <<EOM | tee /etc/modules-load.d/k8s.conf
-              overlay
-              br_netfilter
-              EOM
-              modprobe overlay
-              modprobe br_netfilter
-
-              cat <<EOM | tee /etc/sysctl.d/k8s.conf
-              net.bridge.bridge-nf-call-iptables  = 1
-              net.bridge.bridge-nf-call-ip6tables = 1
-              net.ipv4.ip_forward                 = 1
-              EOM
-              sysctl --system
-
-              # 2. התקנת Containerd
-              apt-get update -y && apt-get install -y containerd
-              mkdir -p /etc/containerd
-              containerd config default | tee /etc/containerd/config.toml
-              sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-              systemctl restart containerd
-
-              # 3. התקנת Kubernetes components
-              apt-get install -y apt-transport-https curl
-              curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-              echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /' | tee /etc/apt/sources.list.d/kubernetes.list
-              apt-get update
-              apt-get install -y kubelet kubeadm kubectl
-              apt-mark hold kubelet kubeadm kubectl
+              ...
               EOF
 
   tags = {
