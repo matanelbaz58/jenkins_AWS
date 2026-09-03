@@ -1,4 +1,4 @@
-- name: Setup Kubernetes Cluster
+- name: Setup All Nodes
   hosts: all
   become: yes
   tasks:
@@ -10,27 +10,29 @@
         name: containerd
         state: present
 
-    - name: Initialize Kubernetes Master
-      hosts: master
-      tasks:
-        - name: Run kubeadm init
-          command: kubeadm init --pod-network-cidr=10.244.0.0/16
-          register: kubeadm_init
+- name: Initialize Kubernetes Master
+  hosts: master
+  become: yes
+  tasks:
+    - name: Run kubeadm init
+      command: kubeadm init --pod-network-cidr=10.244.0.0/16
+      args:
+        creates: /etc/kubernetes/admin.conf
 
-        - name: Save Join Command
-          copy:
-            content: "{{ kubeadm_init.stdout_lines | select('search', 'kubeadm join') | first }}"
-            dest: /tmp/join_command
+    - name: Generate and save join command on Master
+      shell: kubeadm token create --print-join-command > /tmp/join_command
 
-    - name: Join Workers
-      hosts: workers
-      tasks:
-        - name: Fetch join command from master
-          delegate_to: "{{ groups['master'][0] }}"
-          fetch:
-            src: /tmp/join_command
-            dest: /tmp/join_command
-            flat: yes
+    - name: Fetch join command to Jenkins controller
+      fetch:
+        src: /tmp/join_command
+        dest: /tmp/join_command
+        flat: yes
 
-        - name: Join cluster
-          command: "{{ lookup('file', '/tmp/join_command') }}"
+- name: Join Workers to Cluster
+  hosts: workers
+  become: yes
+  tasks:
+    - name: Join cluster
+      command: "{{ lookup('file', '/tmp/join_command') }}"
+      args:
+        creates: /etc/kubernetes/kubelet.conf
