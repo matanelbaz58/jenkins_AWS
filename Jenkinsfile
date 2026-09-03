@@ -15,8 +15,7 @@ pipeline {
             }
         }
 
-
-stage('Ansible K8s Setup') {
+        stage('Ansible K8s Setup') {
             steps {
                 // שולף את מפתח ה-SSH שהגדרנו קודם ב-Credentials תחת השם aws-lab-key
                 withCredentials([sshUserPrivateKey(credentialsId: 'aws-lab-key', keyFileVariable: 'SSH_KEY')]) {
@@ -38,8 +37,8 @@ stage('Ansible K8s Setup') {
                 }
             }
         }
-
-
-        }
     }
 }
+
+
+
