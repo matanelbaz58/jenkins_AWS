@@ -1,0 +1,36 @@
+- name: Setup Kubernetes Cluster
+  hosts: all
+  become: yes
+  tasks:
+    - name: Disable Swap
+      command: swapoff -a
+
+    - name: Install Containerd
+      apt:
+        name: containerd
+        state: present
+
+    - name: Initialize Kubernetes Master
+      hosts: master
+      tasks:
+        - name: Run kubeadm init
+          command: kubeadm init --pod-network-cidr=10.244.0.0/16
+          register: kubeadm_init
+
+        - name: Save Join Command
+          copy:
+            content: "{{ kubeadm_init.stdout_lines | select('search', 'kubeadm join') | first }}"
+            dest: /tmp/join_command
+
+    - name: Join Workers
+      hosts: workers
+      tasks:
+        - name: Fetch join command from master
+          delegate_to: "{{ groups['master'][0] }}"
+          fetch:
+            src: /tmp/join_command
+            dest: /tmp/join_command
+            flat: yes
+
+        - name: Join cluster
+          command: "{{ lookup('file', '/tmp/join_command') }}"
