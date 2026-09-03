@@ -18,6 +18,7 @@ resource "aws_subnet" "k8s_subnet" {
   vpc_id                  = aws_vpc.k8s_vpc.id
   cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true # קריטי כדי שיהיה להם IP ציבורי
+  availability_zone = "us-east-1a"
 }
 
 # 4. יצירת Route Table
